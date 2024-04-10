@@ -1130,8 +1130,29 @@ if __name__ == '__main__':
             files.append(file)
     print(files)
     # LECTURA Y PLOTEO
-    fig, ax = plt.subplots(1, 1)
     count=0
+    channelList = PDATA(os.path.join(dir_datos,files[0])).read()[3]['channelList']
+    print("channelList:", channelList)
+    channels = len(channelList)
+
+    nplots = len(channelList)
+    ncols = int(numpy.sqrt(nplots) + 0.9)
+    nrows = int((1.0 * nplots / ncols) + 0.9)
+    height = 4.0 * nrows
+    cb_label = 'dB'
+    width = 3.7 * ncols
+    axes = []
+    fig = plt.figure(figsize=(width,height))
+    fig.tight_layout(pad=5.0)
+    for n in range(nplots):
+
+        ax = fig.add_subplot(nrows,ncols,n + 1)
+        ax.tick_params(labelsize=8)
+        axes.append(ax)
+        
+  
+    # fig, ax = plt.subplots(1, 1)
+
     for file in files:
 
         print(file,"-------------------------------------")
@@ -1152,18 +1173,26 @@ if __name__ == '__main__':
         y = meta['heightList']
         #  print("heightList",y)
         for t,obj in zip(times,objs):
-            
             print(t)
-            z= obj['data_spc'][0]/normFactor
-            z= 10* numpy.log10(z).T
-            plt.pcolormesh(x,y,z, cmap='jet',vmin=np.min(z),vmax=np.max(z))
-            plt.title("%s - %s"%(t,"CH 1 "))
+            #print(obj)
+            for i in channelList:
+                z= obj['data_spc'][i]/normFactor
+                z= 10* numpy.log10(z).T
+                # plt.pcolormesh(x,y,z, cmap='jet',vmin=np.min(z),vmax=np.max(z))
+                axes[i].pcolormesh(x,y,z, cmap='jet',vmin=np.min(z),vmax=np.max(z))
+                axes[i].set_title("%s - %s"%(t,"CH "+str(i)))
             plt.pause(0.01)
             if count==0:
-                plt.xlabel("Velocity (m/seg)")
-                plt.ylabel("Range (km)")
-                cbar= plt.colorbar(spacing='uniform')
-                ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+                for i in channelList:
+                    z= obj['data_spc'][i]/normFactor
+                    z= 10* numpy.log10(z).T
+                    pcm= axes[i].pcolormesh(x,y,z, cmap='jet',vmin=np.min(z),vmax=np.max(z))
+    
+    
+                    axes[i].set_xlabel("Velocity (m/seg)")
+                    axes[i].set_ylabel("Range (km)")
+                    plt.colorbar(pcm,ax=axes[i])
+                    axes[i].xaxis.set_minor_locator(AutoMinorLocator(5))
             count+=1
             
 
