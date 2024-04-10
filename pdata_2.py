@@ -5,7 +5,7 @@ import copy
 import datetime
 import inspect
 import matplotlib
-
+from matplotlib.ticker import AutoMinorLocator
 #from matplotlib import pyplot
 
 import matplotlib.pyplot as plt
@@ -1043,42 +1043,75 @@ class PDATA(object):
             self.ltctime    : timestamp (in LT)
             self.datatime   : time as datetime python object
         '''
-        fig, ax = plt.subplots(1, 1)
-        try:
-            while True:
-                if self.nReadBlocks > 1 and self.nReadBlocks == self.meta['nTotalBlocks']:
-                    break
-                if self.nReadBlocks == 1:
-                    self.getFirstHeader()
-                else:
-                    self.getBasicHeader()
-                
-                print('Reading Block {}/{} {}'.format(
-                    self.nReadBlocks,
-                    self.meta['nTotalBlocks'],
-                    self.datatime
-                ))
-
-                self.readBlock()
-
-                '''
-                ADD your code here
-                eg: print datetime block, print self-spectra, plot normalized self spectra for the first channel
-                '''
-                print(self.datatime)
-                #print(self.data['data_spc'])
-                z = self.data['data_spc'][0]/self.normFactor
-                z = 10*numpy.log10(z).T
-                ax.pcolorfast(z)
-                plt.pause(0.05)
+        time_pdata = []
+        obj_pdata  = []
+    
+        while True:
+            if self.nReadBlocks > 1 and self.nReadBlocks == self.meta['nTotalBlocks']:
+                break
+            if self.nReadBlocks == 1:
+                self.getFirstHeader()
+            else:
+                self.getBasicHeader()
             
-        except KeyboardInterrupt:
-            plt.show()
-            print("FINISH PROGRAM...")
+            print('Reading Block {}/{} {}'.format(
+                self.nReadBlocks,
+                self.meta['nTotalBlocks'],
+                self.datatime
+            ))
 
+            self.readBlock()
+
+            '''
+            ADD your code here
+            eg: print datetime block, print self-spectra, plot normalized self spectra for the first channel
+            '''
+            #print(self.datatime)
+            #print(self.data['data_spc'])
+
+            z = self.data['data_spc'][0]/self.normFactor
+            z = 10*numpy.log10(z).T
+            time_pdata.append(self.datatime)
+            obj_pdata.append(self.data)
         
+        return time_pdata,obj_pdata,self.normFactor,self.meta
+            
         
-        
+
+def getFmax(ippSeconds,nCohInt):
+    PRF = 1. / (ippSeconds * nCohInt)
+
+    fmax = PRF
+    return fmax
+
+def getVmax(frequency_radarOp,get_Fmax):
+    C= 3e8
+    _lambda = C / frequency_radarOp
+
+    vmax = get_Fmax * _lambda / 2
+
+    return vmax
+
+def getFreqRange(_getFmax,_nFFTPoints, extrapoints=0):
+    _ippFactor = 1
+    deltafreq  = _getFmax / (_nFFTPoints * _ippFactor)
+    freqrange  = deltafreq * (numpy.arange(_nFFTPoints + extrapoints) -_nFFTPoints / 2.) - deltafreq / 2
+
+    return freqrange
+
+def getVelRange(_getVmax,_nFFTPoints, extrapoints=0):
+    _nmodes    = 1
+    _ippFactor = 1
+    deltav     = _getVmax/ (_nFFTPoints * _ippFactor)
+    velrange   = deltav * (numpy.arange(_nFFTPoints + extrapoints) - _nFFTPoints / 2.)
+
+    if _nmodes:
+        return velrange/_nmodes
+    else:
+        return velrange
+    
+
+
 if __name__ == '__main__':
     '''
     d2015364
@@ -1087,6 +1120,7 @@ if __name__ == '__main__':
     # LIBRERIAS
     import os
     import time 
+    import numpy as np
     # DIRECTORIO
     dir_datos = '/media/soporte/DATA/PDATA/d2015364/'
     contenido = os.listdir(dir_datos)
@@ -1095,10 +1129,42 @@ if __name__ == '__main__':
         if os.path.isfile(os.path.join(dir_datos,file)) and file.endswith('.pdata'):
             files.append(file)
     print(files)
-    time.sleep(4)
-    # filename = '/media/soporte/DATA/PDATA/d2015364/P2015364000.pdata'
-    
+    # LECTURA Y PLOTEO
+    fig, ax = plt.subplots(1, 1)
+    count=0
     for file in files:
+
+        print(file,"-------------------------------------")
         dir_filename = os.path.join(dir_datos,file)
         pdata = PDATA(dir_filename)
-        pdata.read()
+        times, objs, normFactor,meta= pdata.read()
+        print("ippSeconds:",meta['ippSeconds'],"nCohInt:", meta['nCohInt'])
+        _getFmax = getFmax(ippSeconds=meta['ippSeconds'],nCohInt= meta['nCohInt'])
+        print("Fmax: ",_getFmax)
+        _getVmax = getVmax(frequency_radarOp=50*1e6,get_Fmax=_getFmax)
+        print("Vmax: ", _getVmax)
+        print("_nFFTPoints:",meta['nFFTPoints'])
+        _freqrange = getFreqRange(_getFmax=_getFmax,_nFFTPoints=meta['nFFTPoints'], extrapoints=0)
+        print("_freqrange",_freqrange,len(_freqrange))
+        _velrange  = getVelRange(_getVmax=_getVmax,_nFFTPoints=meta['nFFTPoints'], extrapoints=0)
+        print("_velrange",_velrange,len(_velrange))
+        x = _velrange
+        y = meta['heightList']
+        #  print("heightList",y)
+        for t,obj in zip(times,objs):
+            
+            print(t)
+            z= obj['data_spc'][0]/normFactor
+            z= 10* numpy.log10(z).T
+            plt.pcolormesh(x,y,z, cmap='jet',vmin=np.min(z),vmax=np.max(z))
+            plt.title("%s - %s"%(t,"CH 1 "))
+            plt.pause(0.01)
+            if count==0:
+                plt.xlabel("Velocity (m/seg)")
+                plt.ylabel("Range (km)")
+                cbar= plt.colorbar(spacing='uniform')
+                ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+            count+=1
+            
+
+    plt.show()
