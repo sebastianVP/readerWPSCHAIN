@@ -1,4 +1,6 @@
-# REPOSITORIO DE SCRIPT LECTURA, PROCESAMIENTO Y PLOTEO DE DATOS DE RADAR- PDATA
+# REPOSITORIO DE SCRIPT pdata.py
+
+## LECTURA, PROCESAMIENTO Y PLOTEO DE DATOS DE RADAR - PDATA
 ---
 
 Este script tiene como proposito la lectura de datos de radar pdata, sin utilizar la libreria de Signal Chain.
