@@ -11,3 +11,10 @@ Ademas este script muestra ejemplos de como manipular la pdata y su contenido:
 - data_cspc.
 - plot normalizado.
 - Seleccion de canales.
+
+### Clase Principal PDATA.
+
+Esta clase ejecuta los metodos de lectura.
+Script de prueba:
+-pdata.py
+-pdata_2.py
