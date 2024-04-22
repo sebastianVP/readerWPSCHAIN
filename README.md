@@ -14,7 +14,7 @@ Ademas este script muestra ejemplos de como manipular la pdata y su contenido:
 
 ### Clase Principal PDATA.
 
-Esta clase ejecuta los metodos de lectura.
-Script de prueba:
+Esta clase ejecuta los metodos de lectura. Scripts de prueba:
+
 -pdata.py
 -pdata_2.py
